@@ -49,7 +49,7 @@ router.get("/perfil/:id_usuario",authRequired, profile);
 router.post(
   "/actualizar-rol",
   authRequired,
-  rolRequired("admin", "moderador", null),
+  rolRequired("Administrador", "Gerente", null),
   validateSchema(updateRolfromAdmin),
   updateRol
 );
