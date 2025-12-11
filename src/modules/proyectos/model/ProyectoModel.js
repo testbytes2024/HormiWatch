@@ -389,9 +389,13 @@ export class Proyecto {
   // actualiza en la base de datos
   static async editar(proyecto, pool_horas, id_proyecto) {
     try {
-      // funcion para las bases de datos de sequelize
-      if (database === "SEQUELIZE") {
-        // obtener datos antes de actualizar
+      if (database !== "SEQUELIZE") return null;
+
+      // Iniciar una transacción para garantizar la atomicidad de la operación
+      const t = await Proyectos.sequelize.transaction();
+
+      try {
+        // 1. Obtener el proyecto y sus técnicos activos actuales dentro de la transacción
         const proyectoBD = await Proyectos.findByPk(id_proyecto, {
           include: [
             {
@@ -409,12 +413,14 @@ export class Proyecto {
             },
             {
               model: Usuarios,
-              as:'tecnicos',
+              as: 'usuarios', // Usar el alias correcto definido en asociaciones
               attributes: ["id_usuario", "nombre", "apellido", "email"],
               through: {
                 model: Asignaciones,
-                as: 'asignacion',
-                attributes: ["id_asignacion", "status"],
+                attributes: [],
+                where: {
+                  status: true // Solo traer técnicos activos
+                }
               },
             },
             {
@@ -423,10 +429,17 @@ export class Proyecto {
               attributes: ["id_usuario", "nombre", "apellido", "email"],
             }
           ],
+          transaction: t
         });
 
-        // guardar en la base de datos
-        const proyectoActualizado = await Proyectos.update(
+        if (!proyectoBD) {
+          await t.rollback();
+          // Considerar lanzar un error aquí en lugar de retornar null
+          return null;
+        }
+
+        // 2. Actualizar los campos principales del proyecto
+        await proyectoBD.update(
           {
             tarifa: proyecto.tarifa,
             nombre_proyecto: proyecto.nombre,
@@ -434,87 +447,67 @@ export class Proyecto {
             fecha_fin: proyecto.fecha_fin,
             pool_horas_contratadas: proyecto.pool_horas
           },
-          {
-            fields: [
-              "tarifa",
-              "nombre_proyecto",
-              "pool_horas",
-              "fecha_fin",
-              "pool_horas_contratadas"
-            ],
-            where: {
-              id_proyecto: id_proyecto
+          { transaction: t }
+        );
+
+        // 3. Sincronizar los técnicos (la lógica crítica)
+        const idsActuales = proyectoBD.usuarios.map(u => u.id_usuario);
+        const idsNuevos = proyecto.tecnicos.map(t => t.id_usuario);
+
+        const idsParaDesactivar = idsActuales.filter(id => !idsNuevos.includes(id));
+        const idsParaActivar = idsNuevos.filter(id => !idsActuales.includes(id));
+
+        // Desactivar técnicos que ya no están en el proyecto
+        if (idsParaDesactivar.length > 0) {
+          await Asignaciones.update(
+            { status: false },
+            {
+              where: {
+                id_proyecto: id_proyecto,
+                id_usuario: { [Op.in]: idsParaDesactivar }
+              },
+              transaction: t
+            }
+          );
+        }
+
+        // Activar o crear asignaciones para los técnicos nuevos o reactivados
+        if (idsParaActivar.length > 0) {
+          for (const idUsuario of idsParaActivar) {
+            // Intenta encontrar una asignación existente (incluso inactiva)
+            const [asignacion, created] = await Asignaciones.findOrCreate({
+              where: { id_proyecto: id_proyecto, id_usuario: idUsuario },
+              defaults: { status: true },
+              transaction: t
+            });
+
+            // Si la asignación ya existía pero estaba inactiva, la reactivamos
+            if (!created && !asignacion.status) {
+              asignacion.status = true;
+              await asignacion.save({ transaction: t });
             }
           }
-        );
-       
-        // buscar los tecnicos que ya estaban asignados
-        const tecnicosBDSinFormato = await Asignaciones.findAll({
-          attributes: [
-            'id_asignacion',
-            'id_usuario'
-          ]
-        },
-        {
-          where: {
-            id_proyecto: id_proyecto
-          }
-        })
-    
-        // formato de los datos
-        const tecnicosBD = tecnicosBDSinFormato.map((tecnicos) => ({
-          id_asignacion: tecnicos.id_asignacion,
-          id_usuario: tecnicos.id_usuario
-        }));
-
-        // nuevo array con el valor de los tecnicos actualizados
-        const tecnicosActualizados = proyecto.tecnicos
-
-        // Asocia los usuarios al proyecto en la tabla asignaciones
-        for (const tecnico of tecnicosActualizados) {
-          const usuario = await Usuarios.findByPk(tecnico.id_usuario);
-
-          // Comprueba si el tecnico aún existe
-          const existeEnBD = tecnicosBD.some(t => t.id_usuario === tecnico.id_usuario);
-          if (usuario && existeEnBD) {
-            // Si no existe en la base de datos, lo agrega
-            await Asignaciones.create({
-              id_usuario: tecnico.id_usuario,
-              id_proyecto: id_proyecto
-            })
-          }
         }
 
-      // Desasocia los usuarios que ya no están en el proyecto
-      for (const tecnico of tecnicosBD) {
-        const sigueEnProyecto = tecnicosActualizados.some(t => t.id_usuario === tecnico.id_usuario);
-        if (!sigueEnProyecto) {
-          // Si ya no está en este proyecto
-          await Asignaciones.update({
-            status: false
-          },{
-            where: {
-              id_usuario: tecnico.id_usuario,
-              id_proyecto: id_proyecto
-            },
-            fields:[
-              'status'
-            ]
-          })
-        }
-      }
-
-      // busqueda de los datos de auditoria
-      const userFound = await user.findOneById(proyecto.id_lider_proyecto);
-      const auditoria = new Auditoria(
+        // 4. Registrar la auditoría
+        const userFound = await user.findOneById(proyecto.id_lider_proyecto);
+        const auditoria = new Auditoria(
           `${userFound.nombre} ${userFound.apellido}`,
           userFound.rol.nombre_rol,
           `Se ha editado en el siguiente item: proyecto`,
           proyectoBD
-      );
-        await Auditoria.create(auditoria);
+        );
+        await Auditoria.create(auditoria, { transaction: t });
 
-        return proyectoActualizado;
+        // 5. Si todo fue exitoso, confirma la transacción
+        await t.commit();
+        return { success: true };
+
+      } catch (error) {
+        // Si algo falla, revierte todos los cambios
+        await t.rollback();
+        console.log("Error en Proyecto.editar, rollback ejecutado:", error.message);
+        throw error; // Relanzar el error para que el controlador lo maneje
       }
     } catch (error) {
       console.log(error.message);
