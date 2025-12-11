@@ -46,13 +46,13 @@ app.use(cookieParser());
 //Sincronizacion de la base de datos
 
 
-await sequelize.sync({ force: false }).then(() => {
-  console.log('Modelo sincronizado con la base de datos');
-});
+// await sequelize.sync({ force: false }).then(() => {
+//   console.log('Modelo sincronizado con la base de datos');
+// });
 
-await sequelizeClients.sync({ force: false }).then(() => {
-  console.log('Modelo sincronizado con la base de datos de clientes');
-});
+// await sequelizeClients.sync({ force: false }).then(() => {
+//   console.log('Modelo sincronizado con la base de datos de clientes');
+// });
 
 //Middleware para  cliente
 app.use('/clientes', ClientesRouter);
