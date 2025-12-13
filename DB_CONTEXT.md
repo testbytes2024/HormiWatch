@@ -82,6 +82,11 @@ Tipos de servicios facturables.
 | :--- | :--- | :--- | :--- |
 | `id_servicio` | `INTEGER` | `PK`, `AUTO_INCREMENT` | Identificador único. |
 | `nombre_servicio` | `STRING` | `NOT NULL` | Nombre del servicio (ej. Consultoría, Desarrollo). |
+| `plataforma_servicio` | `STRING` | `NULLABLE` | plataforma del servicio. (ej. IBM, Microsoft, etc) |
+| `categoria_servicio` | `STRING` | `NULLABLE` | categoria del servicio (ej. básico, avanzado, etc). |
+| `tipo_servicio` | `STRING` | `NULLABLE` | Tipo del servicio (ej. correciones, rendimiento y monitoreo, etc). |
+| `descripcion_servicio` | `STRING` | `NULLABLE` | Descripción del servicio. |
+
 
 #### **Roles**
 Roles y permisos de usuario.
@@ -89,10 +94,6 @@ Roles y permisos de usuario.
 | :--- | :--- | :--- | :--- |
 | `id_rol` | `INTEGER` | `PK`, `AUTO_INCREMENT` | Identificador único. |
 | `nombre_rol` | `STRING` | `NOT NULL` | Nombre del rol (ej. Admin, Técnico). |
-| `plataforma_servicio` | `STRING` | `NULLABLE` | plataforma del servicio. (ej. IBM, Microsoft, etc) |
-| `categoria_servicio` | `STRING` | `NULLABLE` | categoria del servicio (ej. básico, avanzado, etc). |
-| `tipo_servicio` | `STRING` | `NULLABLE` | Tipo del servicio (ej. correciones, rendimiento y monitoreo, etc). |
-| `descripcion_servicio` | `STRING` | `NULLABLE` | Descripción del servicio. |
 
 #### **Asignaciones**
 Tabla pivote para asignar usuarios a proyectos.
