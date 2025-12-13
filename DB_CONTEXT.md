@@ -16,6 +16,12 @@ Representa a los usuarios del sistema (técnicos, administradores, etc.).
 | `email` | `STRING` | `UNIQUE`, `NOT NULL` | Correo electrónico para autenticación. |
 | `password` | `STRING` | `NOT NULL` | Hash de la contraseña (bcrypt). |
 | `id_rol` | `INTEGER` | `FK` | Referencia a la tabla `Roles`. |
+| `empresa` | `STRING` | `NULLABLE` | Empresa en la que trabaja |
+| `cargo` | `STRING` | `NULLABLE` | Cargo en la empresa |
+| `departamento` | `STRING` | `NULLABLE` | departamento de la empresa al que pertenece |
+| `ultima_conexion` | `DATE` | `NULLABLE` | Timestamp de la ultima vez que inicio sesión |
+| `cedula` | `STRING` | `UNIQUE` | tarjeta de identificacion venezolana (V-,E-,passaporte, RIF, etc) |
+| `token` | `STRING` | `NULLABLE` | token para recuperar la contraseña |
 | `estado` | `BOOLEAN` | `DEFAULT true` | Estado del usuario (activo/inactivo). |
 | `foto_perfil` | `STRING` | `NULLABLE` | URL de la foto almacenada en Firebase. |
 
@@ -25,8 +31,11 @@ Proyectos asignados a los clientes.
 | :--- | :--- | :--- | :--- |
 | `id_proyecto` | `INTEGER` | `PK`, `AUTO_INCREMENT` | Identificador único del proyecto. |
 | `nombre_proyecto` | `STRING` | `NOT NULL` | Nombre descriptivo del proyecto. |
+| `status` | `INTEGER` | `NULLABLE` | estado del proyecto |
 | `tarifa` | `FLOAT/DECIMAL` | `NOT NULL` | Tarifa por hora o monto del proyecto. |
-| `pool_horas` | `INTEGER` | `NOT NULL` | Total de horas asignadas al proyecto. |
+| `pool_horas` | `INTEGER` | `NOT NULL` | Total de horas trabajadas en el proyecto. |
+| `pool_horas_contratadas` | `INTEGER` | `NOT NULL` | Total de horas asignadas al proyecto. |
+| `facturable` | `BOOLEAN` | `NULLABLE` | Condicion de si el proyecto es facturable o no |
 | `fecha_inicio` | `DATE` | `NOT NULL` | Fecha de inicio del proyecto. |
 | `fecha_fin` | `DATE` | `NULLABLE` | Fecha estimada de finalización. |
 | `id_responsable_cliente`| `INTEGER` | `FK` | Referencia a `Responsables_cliente`. |
@@ -40,10 +49,12 @@ Registro de horas trabajadas por los usuarios.
 | `id_proyecto` | `INTEGER` | `FK` | Proyecto al que se imputan las horas. |
 | `id_servicio` | `INTEGER` | `FK` | Tipo de servicio realizado. |
 | `fecha` | `DATE` | `NOT NULL` | Fecha de ejecución de la tarea. |
-| `horas` | `FLOAT` | `NOT NULL` | Cantidad de horas trabajadas. |
+| `hora_inicio` | `STRING` | `NOT NULL` | Hora en que empezó la tarea |
+| `hora_fin` | `STRING` | `NOT NULL` | Hora en que finalizó la tarea |
+| `tiempo_total` | `FLOAT` | `NOT NULL` | Cantidad de horas trabajadas. |
 | `descripcion` | `TEXT` | `NULLABLE` | Detalles adicionales del trabajo. |
-| `factor_tiempo` | `ENUM` | `('DIURNO', 'NOCTURNO', 'FERIADO')` | Factor para cálculo de costos. |
-| `costo` | `FLOAT/DECIMAL` | `NOT NULL` | Costo calculado (horas * tarifa * factor). |
+| `factor_tiempo_total` | `ENUM` | `('DIURNO', 'NOCTURNO', 'FERIADO')` | Factor para cálculo de costos. |
+| `total_tarifa` | `FLOAT/DECIMAL` | `NOT NULL` | Costo calculado (horas * tarifa * factor). |
 
 #### **Clientes**
 Información de las empresas clientes.
@@ -52,7 +63,6 @@ Información de las empresas clientes.
 | `id_cliente` | `INTEGER` | `PK`, `AUTO_INCREMENT` | Identificador único del cliente. |
 | `nombre_cliente` | `STRING` | `NOT NULL` | Razón social o nombre comercial. |
 | `direccion` | `STRING` | `NULLABLE` | Dirección física. |
-| `telefono` | `STRING` | `NULLABLE` | Teléfono de contacto principal. |
 
 #### **Responsables_cliente**
 Personas de contacto en el cliente.
@@ -62,6 +72,9 @@ Personas de contacto en el cliente.
 | `id_cliente` | `INTEGER` | `FK` | Cliente al que pertenece. |
 | `nombre` | `STRING` | `NOT NULL` | Nombre del contacto. |
 | `cargo` | `STRING` | `NULLABLE` | Cargo en la empresa cliente. |
+| `departamento` | `STRING` | `NULLABLE` | departamento en la empresa cliente. |
+| `telefono` | `STRING` | `NULLABLE` | telefono de contacto. |
+| `cedula` | `STRING` | `NULLABLE` | cedula del contacto. |
 
 #### **Servicios**
 Tipos de servicios facturables.
@@ -76,6 +89,10 @@ Roles y permisos de usuario.
 | :--- | :--- | :--- | :--- |
 | `id_rol` | `INTEGER` | `PK`, `AUTO_INCREMENT` | Identificador único. |
 | `nombre_rol` | `STRING` | `NOT NULL` | Nombre del rol (ej. Admin, Técnico). |
+| `plataforma_servicio` | `STRING` | `NULLABLE` | plataforma del servicio. (ej. IBM, Microsoft, etc) |
+| `categoria_servicio` | `STRING` | `NULLABLE` | categoria del servicio (ej. básico, avanzado, etc). |
+| `tipo_servicio` | `STRING` | `NULLABLE` | Tipo del servicio (ej. correciones, rendimiento y monitoreo, etc). |
+| `descripcion_servicio` | `STRING` | `NULLABLE` | Descripción del servicio. |
 
 #### **Asignaciones**
 Tabla pivote para asignar usuarios a proyectos.
@@ -89,10 +106,8 @@ Tabla pivote para asignar usuarios a proyectos.
 Gestión de avisos a usuarios.
 | Atributo | Tipo de Dato | Restricciones | Descripción |
 | :--- | :--- | :--- | :--- |
-| `id_notificacion` | `INTEGER` | `PK`, `AUTO_INCREMENT` | Identificador único. |
 | `id_usuario` | `INTEGER` | `FK` | Destinatario de la notificación. |
 | `id_proyecto` | `INTEGER` | `FK` | Proyecto relacionado (si aplica). |
-| `status` | `BOOLEAN/INT` | `NULLABLE` | Estado de lectura/envío. |
 
 #### **Auditoria**
 Log de actividades críticas.
