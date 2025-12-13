@@ -3,8 +3,8 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 
-import {sequelize} from './src/database/sequelize.js';
-import {sequelizeClients} from './src/database/sequelize.js';
+// import {sequelize} from './src/database/sequelize.js';
+// import {sequelizeClients} from './src/database/sequelize.js';
 
 import ClientesRouter from './src/modules/clientes/routes/ClientesRouter.js';
 import ResponsablesClienteRouter from './src/modules/responsables_clientes/routes/responsables_clienteRoutes.js';
@@ -27,7 +27,7 @@ import { proyectoFin } from "./src/services/tareasProgramadas.js";
 
 const port = process.env.PORT || 3000;
 const host = process.env.HOST;
-const corsOrigin = process.env.CORS_ORIGIN;
+// const corsOrigin = process.env.CORS_ORIGIN;
 
 const dbSelect = process.env.SELECT_DB;
 
@@ -37,7 +37,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(cors({
-  origin: corsOrigin,
+  origin: "*",
 }));
 //manejo de json
 app.use(express.json());
